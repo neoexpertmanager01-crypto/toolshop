@@ -4,7 +4,9 @@ info:
   version: 1.0.0
   description: |
     API міні-магазину інструментів ToolShop.
-    Контекст «Каталог»: CRUD товарів. Усі помилки повертаються в єдиному форматі `ErrorResponse`.
+    Контекст «Каталог»: CRUD товарів. Контекст «Замовлення»: ідемпотентне створення замовлень.
+    Усі помилки повертаються в єдиному форматі `ErrorResponse`; кожна відповідь має заголовок `X-Request-Id`.
+    API-маршрути обмежені rate-limit: при перевищенні — `429` із заголовком `Retry-After`.
 servers:
   - url: http://localhost:8080
     description: Локальний запуск
@@ -12,6 +14,8 @@ servers:
 tags:
   - name: Products
     description: Товари каталогу
+  - name: Orders
+    description: Замовлення
   - name: System
     description: Службові ендпоінти
 
@@ -120,7 +124,116 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /orders:
+    post:
+      tags: [Orders]
+      summary: Створити замовлення (ідемпотентно)
+      description: |
+        Повтор запиту з тим самим `Idempotency-Key` і тим самим тілом повертає те саме замовлення
+        (без дубля й повторного списання залишку) та заголовок `Idempotent-Replayed: true`.
+        Той самий ключ з іншим тілом — `422`.
+      operationId: createOrder
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderCreateRequest"
+      responses:
+        "201":
+          description: Замовлення створено (або повернуто раніше створене за тим самим ключем)
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/X-Request-Id"
+            Idempotent-Replayed:
+              description: true, якщо це повтор раніше виконаного запиту
+              schema:
+                type: boolean
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Недостатньо товару на складі
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: Conflict
+                code: INSUFFICIENT_STOCK
+                details:
+                  - field: "product:4"
+                    message: Only 1 of «Рейсмусовий верстат 305 мм» left
+                requestId: 3f409199-d39b-4a7f-a8ac-1e75f81125e8
+        "422":
+          description: Idempotency-Key уже використано з іншим тілом запиту
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error: UnprocessableEntity
+                code: IDEMPOTENCY_KEY_REUSED
+                requestId: demo-3
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /orders/{id}:
+    get:
+      tags: [Orders]
+      summary: Деталі замовлення
+      operationId: getOrder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Замовлення
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
 components:
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Унікальний ключ операції (UUID); повтори з тим самим ключем не створюють дублів
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 200
+      example: 5b0c8f2e-6a1d-4f7e-9b3a-2d4c1e8f7a60
+    RequestId:
+      name: X-Request-Id
+      in: header
+      required: false
+      description: Ідентифікатор запиту для кореляції логів; якщо не передано — генерується сервером
+      schema:
+        type: string
+
+  headers:
+    X-Request-Id:
+      description: Ідентифікатор запиту (той самий, що в тілі помилки `requestId`)
+      schema:
+        type: string
+
   schemas:
     ProductCreateRequest:
       type: object
@@ -200,9 +313,74 @@ components:
           format: date-time
           example: "2026-11-17T11:20:00Z"
 
+    OrderCreateRequest:
+      type: object
+      required: [items]
+      properties:
+        customerId:
+          type: string
+          description: Покупець; без авторизації за замовчуванням "guest"
+          example: guest
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [productId]
+            properties:
+              productId:
+                type: integer
+                minimum: 1
+                example: 1
+              quantity:
+                type: integer
+                minimum: 1
+                maximum: 100
+                default: 1
+                example: 2
+
+    OrderResponse:
+      type: object
+      required: [id, customerId, status, total, items, createdAt]
+      properties:
+        id:
+          type: integer
+          example: 4
+        customerId:
+          type: string
+          example: guest
+        status:
+          type: string
+          enum: [new, confirmed, shipped, cancelled]
+        total:
+          type: number
+          example: 7000
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: integer
+                example: 1
+              productName:
+                type: string
+                example: Фрезер ручний 1200 Вт
+              unitPrice:
+                type: number
+                example: 3500
+              quantity:
+                type: integer
+                example: 2
+        createdAt:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+
     ErrorResponse:
       type: object
-      required: [error]
+      required: [error, requestId]
       properties:
         error:
           type: string
@@ -223,6 +401,10 @@ components:
               message:
                 type: string
                 example: Name is required
+        requestId:
+          type: string
+          description: Той самий ідентифікатор, що в заголовку X-Request-Id
+          example: 233e4bc9-5b06-4550-86b1-20a7b4413b49
 
   responses:
     ValidationError:
@@ -237,6 +419,22 @@ components:
             details:
               - field: name
                 message: Name is required
+            requestId: 233e4bc9-5b06-4550-86b1-20a7b4413b49
+    TooManyRequests:
+      description: Перевищено ліміт запитів; повторити після Retry-After секунд
+      headers:
+        Retry-After:
+          description: Через скільки секунд можна повторити запит
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: TooManyRequests
+            code: RATE_LIMITED
+            requestId: 3f409199-d39b-4a7f-a8ac-1e75f81125e8
     NotFound:
       description: Товар не знайдено
       content:
@@ -246,3 +444,4 @@ components:
           example:
             error: NotFound
             code: PRODUCT_NOT_FOUND
+            requestId: 233e4bc9-5b06-4550-86b1-20a7b4413b49

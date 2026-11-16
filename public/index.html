@@ -62,6 +62,15 @@
     #items .id { color: var(--muted); font-size: 13px; }
     #items .name { margin-top: 6px; font-weight: 600; }
     #items .price { margin-top: 10px; color: var(--accent-dark); font-size: 14px; }
+    #items .buy { margin-top: 12px; padding: 6px 14px; font-size: 14px; }
+    #degraded {
+      background: #fff4e5;
+      border: 1px solid #f59e0b;
+      color: #7c2d12;
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+    }
   </style>
 </head>
 <body>
@@ -71,6 +80,9 @@
   </header>
 
   <main>
+    <div id="degraded" role="alert" hidden>
+      <strong>Сервер перевантажено.</strong> Кілька запитів поспіль не вдалися — кнопки тимчасово вимкнено, спробуйте за 10 секунд.
+    </div>
     <div class="toolbar">
       <button id="load">Load items</button>
       <p id="status"></p>
@@ -78,46 +90,7 @@
     <ul id="items"></ul>
   </main>
 
-  <script>
-    const button = document.getElementById("load");
-    const list = document.getElementById("items");
-    const status = document.getElementById("status");
-
-    function setStatus(text, isError = false) {
-      status.textContent = text;
-      status.classList.toggle("error", isError);
-    }
-
-    button.addEventListener("click", async () => {
-      button.disabled = true;
-      list.innerHTML = "";
-      setStatus("Завантаження…");
-      try {
-        const res = await fetch("/products");
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const items = await res.json();
-        for (const item of items) {
-          const li = document.createElement("li");
-          const id = document.createElement("div");
-          id.className = "id";
-          id.textContent = `Товар #${item.id}`;
-          const name = document.createElement("div");
-          name.className = "name";
-          name.textContent = item.name;
-          const price = document.createElement("div");
-          price.className = "price";
-          price.textContent = `${item.price.toLocaleString("uk-UA")} грн · на складі: ${item.stock}`;
-          li.append(id, name, price);
-          list.appendChild(li);
-        }
-        setStatus(items.length ? `Знайдено товарів: ${items.length}` : "Товарів немає");
-      } catch (err) {
-        setStatus(`Не вдалося завантажити: ${err.message}`, true);
-      } finally {
-        button.disabled = false;
-      }
-    });
-  </script>
+  <script type="module" src="/js/app.js"></script>
 </body>
 </html>
 

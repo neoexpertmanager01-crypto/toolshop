@@ -20,3 +20,15 @@ export class NotFoundError extends AppError {
     super({ status: 404, error: "NotFound", code });
   }
 }
+
+export class ConflictError extends AppError {
+  constructor(code, details) {
+    super({ status: 409, error: "Conflict", code, details });
+  }
+}
+
+export class UnprocessableError extends AppError {
+  constructor(code) {
+    super({ status: 422, error: "UnprocessableEntity", code });
+  }
+}

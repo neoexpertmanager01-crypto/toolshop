@@ -18,3 +18,28 @@ SELECT * FROM (VALUES
   ('Шліфмашина ексцентрикова 125 мм', 'sanders',      2700.00, 7)
 ) AS seed(name, category_id, price, stock)
 WHERE NOT EXISTS (SELECT 1 FROM products);
+
+CREATE TABLE IF NOT EXISTS orders (
+  id          SERIAL PRIMARY KEY,
+  customer_id TEXT          NOT NULL,
+  status      TEXT          NOT NULL,
+  total       NUMERIC(12,2) NOT NULL,
+  created_at  TIMESTAMPTZ   NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS order_items (
+  order_id     INTEGER       NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  product_id   INTEGER       NOT NULL,
+  product_name TEXT          NOT NULL,
+  unit_price   NUMERIC(10,2) NOT NULL,
+  quantity     INTEGER       NOT NULL CHECK (quantity > 0),
+  PRIMARY KEY (order_id, product_id)
+);
+
+-- Ключі ідемпотентності POST /orders: повтор з тим самим ключем повертає те саме замовлення
+CREATE TABLE IF NOT EXISTS idempotency_keys (
+  key          TEXT PRIMARY KEY,
+  request_hash TEXT        NOT NULL,
+  order_id     INTEGER     REFERENCES orders(id),
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
