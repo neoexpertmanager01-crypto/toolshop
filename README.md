@@ -69,6 +69,10 @@ docker run --rm -p 8080:8080 \
 
 Теоретична схема розгортання ToolShop у Kubernetes і опис дизайну: [docs/k8s/README.md](docs/k8s/README.md).
 
+Практична 10 (Minikube, Deployment + Service, ConfigMap / Secret, probes) виконана у fork навчального репозиторію:
+[neoexpertmanager01-crypto/k8s-demo](https://github.com/neoexpertmanager01-crypto/k8s-demo) — звіт
+[REPORT.md](https://github.com/neoexpertmanager01-crypto/k8s-demo/blob/main/REPORT.md).
+
 ## Тести
 
 ```bash
