@@ -22,6 +22,19 @@ npm start          # API і сторінка на http://localhost:8080
 
 Зупинити базу: `npm run db:down` (дані зберігаються у volume `db-data`).
 
+## Запуск у Docker
+
+```bash
+npm run db:up                                   # PostgreSQL у контейнері toolshop-db
+docker build -t toolshop-api:1.0.0 .            # образ API
+docker run --name toolshop-api --rm -d -p 8080:8080 \
+  -e DATABASE_URL=postgresql://toolshop:toolshop@host.docker.internal:5432/toolshop \
+  toolshop-api:1.0.0                            # http://localhost:8080
+docker stop toolshop-api
+```
+
+Звіт практичної 6 (hello-world, збирання, запуск, логи): [docs/docker/README.md](docs/docker/README.md).
+
 ## Тести
 
 ```bash
