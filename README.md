@@ -1,5 +1,7 @@
 # ToolShop
 
+[![CI](https://github.com/neoexpertmanager01-crypto/toolshop/actions/workflows/ci.yml/badge.svg)](https://github.com/neoexpertmanager01-crypto/toolshop/actions/workflows/ci.yml)
+
 Міні-магазин інструментів (верстати, електроінструмент). Командний курсовий проєкт з Web design.
 
 Архітектура: **клієнт (HTML) → бекенд (Node.js + Express, модульний моноліт) → БД (PostgreSQL у Docker)**.
@@ -34,6 +36,29 @@ docker stop toolshop-api
 ```
 
 Звіт практичної 6 (hello-world, збирання, запуск, логи): [docs/docker/README.md](docs/docker/README.md).
+
+## CI/CD (GitHub Actions)
+
+Workflow: [.github/workflows/ci.yml](.github/workflows/ci.yml) · запуски: [Actions](https://github.com/neoexpertmanager01-crypto/toolshop/actions/workflows/ci.yml)
+
+| Job | Коли | Що робить |
+|-----|------|-----------|
+| **Install & test** | `push` і `pull_request` у `main` | checkout → Node 20 з кешем npm → `npm ci` → перевірка синтаксису → `npm test`; JUnit-звіт `test-results.xml` завантажується як артефакт `test-results` |
+| **Build & push image to GHCR** | лише `push` у `main` (після успішних тестів) | збирає Docker-образ API з [Dockerfile](Dockerfile) і публікує в GitHub Container Registry |
+
+**Delivery — варіант A (GHCR).** Образ:
+[`ghcr.io/neoexpertmanager01-crypto/toolshop-api`](https://github.com/neoexpertmanager01-crypto/toolshop/pkgs/container/toolshop-api)
+з тегами `sha-<commit>` (відстеження конкретної збірки) і `latest`.
+
+```bash
+docker pull ghcr.io/neoexpertmanager01-crypto/toolshop-api:latest
+docker run --rm -p 8080:8080 \
+  -e DATABASE_URL=postgresql://toolshop:toolshop@host.docker.internal:5432/toolshop \
+  ghcr.io/neoexpertmanager01-crypto/toolshop-api:latest
+```
+
+Додатково: мінімальні `permissions` (`contents: read`, `packages: write` лише для delivery), `concurrency`
+зі скасуванням застарілих запусків, `timeout-minutes`, кеш npm і Docker-шарів, Job Summary з тегами образу.
 
 ## Тести
 
