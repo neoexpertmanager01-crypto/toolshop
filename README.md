@@ -60,6 +60,11 @@ docker run --rm -p 8080:8080 \
 Додатково: мінімальні `permissions` (`contents: read`, `packages: write` лише для delivery), `concurrency`
 зі скасуванням застарілих запусків, `timeout-minutes`, кеш npm і Docker-шарів, Job Summary з тегами образу.
 
+## Моніторинг (практична 8)
+
+Звіт: [docs/observability/README.md](docs/observability/README.md) — стенд Grafana + Loki + Tempo + OTEL,
+скриншоти RED / трейсу / логів і власний дашборд [My Demo RED](docs/observability/my-demo-red-dashboard.json).
+
 ## Тести
 
 ```bash
