@@ -1,0 +1,248 @@
+openapi: 3.0.3
+info:
+  title: ToolShop API
+  version: 1.0.0
+  description: |
+    API міні-магазину інструментів ToolShop.
+    Контекст «Каталог»: CRUD товарів. Усі помилки повертаються в єдиному форматі `ErrorResponse`.
+servers:
+  - url: http://localhost:8080
+    description: Локальний запуск
+
+tags:
+  - name: Products
+    description: Товари каталогу
+  - name: System
+    description: Службові ендпоінти
+
+paths:
+  /health:
+    get:
+      tags: [System]
+      summary: Перевірка, що сервіс працює
+      operationId: getHealth
+      responses:
+        "200":
+          description: Сервіс працює
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /products:
+    get:
+      tags: [Products]
+      summary: Список товарів
+      operationId: listProducts
+      responses:
+        "200":
+          description: Список товарів
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductResponse"
+    post:
+      tags: [Products]
+      summary: Створити товар
+      operationId: createProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductCreateRequest"
+      responses:
+        "201":
+          description: Товар створено
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+
+  /products/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Ідентифікатор товару
+        schema:
+          type: integer
+          minimum: 1
+    get:
+      tags: [Products]
+      summary: Деталі товару
+      operationId: getProduct
+      responses:
+        "200":
+          description: Товар
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Products]
+      summary: Частково оновити товар
+      operationId: updateProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductUpdateRequest"
+      responses:
+        "200":
+          description: Оновлений товар
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Products]
+      summary: Видалити товар
+      operationId: deleteProduct
+      responses:
+        "204":
+          description: Товар видалено
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  schemas:
+    ProductCreateRequest:
+      type: object
+      required: [name, price]
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: Фрезер ручний 1200 Вт
+        categoryId:
+          type: string
+          nullable: true
+          example: routers
+        price:
+          type: number
+          exclusiveMinimum: true
+          minimum: 0
+          example: 3500
+        stock:
+          type: integer
+          minimum: 0
+          default: 0
+          example: 5
+
+    ProductUpdateRequest:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      description: Передаються лише ті поля, які треба змінити.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: Фрезер ручний 1400 Вт
+        categoryId:
+          type: string
+          nullable: true
+        price:
+          type: number
+          exclusiveMinimum: true
+          minimum: 0
+          example: 3900
+        stock:
+          type: integer
+          minimum: 0
+          example: 3
+
+    ProductResponse:
+      type: object
+      required: [id, name, categoryId, price, stock, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Фрезер ручний 1200 Вт
+        categoryId:
+          type: string
+          nullable: true
+          example: routers
+        price:
+          type: number
+          example: 3500
+        stock:
+          type: integer
+          example: 5
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-11-17T10:15:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-11-17T11:20:00Z"
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: Тип помилки
+          example: ValidationError
+        code:
+          type: string
+          description: Машинний код конкретної причини
+          example: NAME_REQUIRED
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: name
+              message:
+                type: string
+                example: Name is required
+
+  responses:
+    ValidationError:
+      description: Некоректні вхідні дані
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: ValidationError
+            code: NAME_REQUIRED
+            details:
+              - field: name
+                message: Name is required
+    NotFound:
+      description: Товар не знайдено
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: NotFound
+            code: PRODUCT_NOT_FOUND

@@ -61,6 +61,7 @@
     }
     #items .id { color: var(--muted); font-size: 13px; }
     #items .name { margin-top: 6px; font-weight: 600; }
+    #items .price { margin-top: 10px; color: var(--accent-dark); font-size: 14px; }
   </style>
 </head>
 <body>
@@ -92,7 +93,7 @@
       list.innerHTML = "";
       setStatus("Завантаження…");
       try {
-        const res = await fetch("/items");
+        const res = await fetch("/products");
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const items = await res.json();
         for (const item of items) {
@@ -103,7 +104,10 @@
           const name = document.createElement("div");
           name.className = "name";
           name.textContent = item.name;
-          li.append(id, name);
+          const price = document.createElement("div");
+          price.className = "price";
+          price.textContent = `${item.price.toLocaleString("uk-UA")} грн · на складі: ${item.stock}`;
+          li.append(id, name, price);
           list.appendChild(li);
         }
         setStatus(items.length ? `Знайдено товарів: ${items.length}` : "Товарів немає");
