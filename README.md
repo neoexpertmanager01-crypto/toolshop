@@ -65,6 +65,10 @@ docker run --rm -p 8080:8080 \
 Звіт: [docs/observability/README.md](docs/observability/README.md) — стенд Grafana + Loki + Tempo + OTEL,
 скриншоти RED / трейсу / логів і власний дашборд [My Demo RED](docs/observability/my-demo-red-dashboard.json).
 
+## Kubernetes (практична 9)
+
+Теоретична схема розгортання ToolShop у Kubernetes і опис дизайну: [docs/k8s/README.md](docs/k8s/README.md).
+
 ## Тести
 
 ```bash
